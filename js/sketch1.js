@@ -37,24 +37,28 @@ lastSelectedCirc = null;
 
 nodes = [];
 
-nodes = [{node:'A', x:100, y:25, color:'gray', fixed:true},
-         {node:'B', x:100, y:80, color:'gray', fixed:true},
-         {node:'C', x:100, y:135, color:'gray', fixed:true},
-         {node:'D', x:180, y:80, color:'gray', fixed:true}
+nodes = [{node:'A', x:100, y:25, color:'gray'},
+         {node:'B', x:100, y:80, color:'gray'},
+         {node:'C', x:100, y:135, color:'gray'},
+         {node:'D', x:180, y:80, color:'gray'}
         ];
 
 links = [];
 
-links = [{source: 'A', dest:'B', color:'gray', used:false},
-         {source:'B', dest:'A', color:'gray', used:false},
-         {source:'B', dest:'C', color:'gray', used:false},
-         {source:'C', dest:'B', color:'gray', used:false},
-         {source:'A', dest:'D', color:'gray', used:false},
-         {source:'D', dest:'A', color:'gray', used:false},
-         {source:'B', dest:'D', color:'gray', used:false},
-         {source:'D', dest:'B', color:'gray', used:false},
-         {source:'C', dest:'D', color:'gray', used:false},
-         {source:'D', dest:'C', color:'gray', used:false}
+links = [{bridge: '1', source:'A', dest:'B', color:'gray', used:false},
+         //{bridge: '1', source:'B', dest:'A', color:'gray', used:false},
+         //{bridge: '2', source:'A', dest:'B', color:'gray', used:false},
+         {bridge: '2', source:'B', dest:'A', color:'gray', used:false},
+         {bridge: '3', source:'B', dest:'C', color:'gray', used:false},
+         {bridge: '3', source:'C', dest:'B', color:'gray', used:false},
+         //{bridge: '4', source:'B', dest:'C', color:'gray', used:false},
+         //{bridge: '4', source:'C', dest:'B', color:'gray', used:false},
+         {bridge: '5', source:'A', dest:'D', color:'gray', used:false},
+         //{bridge: '5', source:'D', dest:'A', color:'gray', used:false},
+         {bridge: '6', source:'B', dest:'D', color:'gray', used:false},
+         //{bridge: '6', source:'D', dest:'B', color:'gray', used:false},
+         {bridge: '7', source:'C', dest:'D', color:'gray', used:false},
+         //{bridge: '7', source:'D', dest:'C', color:'gray', used:false}
         ];
 
 //set link positions based on source and destination nodes
@@ -98,7 +102,7 @@ paths.attr("d", function(d) {
     .attr('stroke','gray')
     .attr('fill','none')
     .attr('class',function(d){
-        return 'link-' + d.source + d.dest + ' link'  
+        return 'link-' + d.bridge + ' link'  
     });
 
 
@@ -130,47 +134,128 @@ circles
         //check to see if there is already a selected circle, and whether it is the same as the node that was clicked. If not,
         if (selectedCirc && selectedCirc != d.node){
             
-            //select the link between the two nodes
-            var connectLink = d3.select('.' + 'link-' + selectedCirc + d.node); 
+            var foundOne = false;
+                    
+            var checkLinks = d3.selectAll('.link').filter(function(f){
+                if (f.source == d.node && f.dest == selectedCirc && foundOne === false){
+                    console.log('filter found 1');
+                    if(f.used === true){
+                        var tempLink = d3.selectAll('.link').filter(function(g){
+                            if (g.dest == d.node && g.source == selectedCirc){
+                                if(g.used === true){
+                                    console.log('both used 1');
+                                    return false;
+                                }
+                                else {
+                                    foundOne = true;
+                                    g.used = true;
+                                    return g;
+                                }
+                            }
+                        });
+                        console.log(tempLink);
+                        return tempLink;
+                    }
+                    if(f.used === false){
+                        f.used = true;
+                        foundOne = true;
+                        return f;  
+                    }
+                    
+                }
+                else if (f.dest == d.node && f.source == selectedCirc && foundOne === false){
+                    console.log('filter found 2');
+                    if(f.used === true){
+                        console.log('but it was used 2')
+                        var tempLink = d3.selectAll('.link').filter(function(g){
+                            if (g.source == d.node && g.dest == selectedCirc){
+                                if(g.used === true){
+                                    console.log('both used 2');
+                                    return false;
+                                }
+                                else {
+                                    g.used = true;
+                                    foundOne = true;
+                                    return g;
+                                }
+                            }
+                        });
+                        return tempLink;
+                    }
+                    if(f.used === false){
+                        f.used = true;
+                        foundOne = true;
+                        return f;  
+                    }
+                    
+                }
+                
+            });
             
-            //go through the links array and see whether the link has already been used. 
-            var checkLink = links.forEach(function(e){
+            foundOne = false;    
+            console.log(checkLinks);
+            
+            checkLinks.attr('stroke','green').attr('stroke-width',6);
+            /*
+            //go through the links array and see whether the link exists. 
+            links.forEach(function(e){
+                
+                //check for both link-AB and link-BA (should be equivalent, but using one uses both)
                 if (e.source == selectedCirc && e.dest == d.node){
-                    //if it has been used, log an error
-                    if(e.used === true){
-                        console.log('used');
-                    }
-                    //if it hasn't been used,
-                    else {
-                        //check whether it is a valid connection. If not, log error
-                        if (connectLink[0][0] == null){
-                            console.log('connection does not exist');
+                    
+                    if (!bridgeNum){ 
+                        
+                        //if it has been used, log an error
+                        if(e.used === true){
+                            console.log('used');
                         }
-                        //if it is a valid link, change its color and set its used parameter
+                        //if it hasn't been used,
                         else {
-                            connectLink.attr('stroke','orange');
-                            e.used = true;
+
+                            //select the links between the two nodes (both directions)
+                            var connectLink = d3.select('.' + 'link-' + e.bridge); 
+
+                            //check whether it is a valid connection. If not, log error
+                            if (connectLink[0][0] == null){
+                                console.log('connection does not exist');
+                            }
+                            //if it is a valid link, change its color and set its used parameter
+                            else {
+                                connectLink.attr('stroke','orange').attr('stroke-width',4);
+                                e.used = true;
+                                bridgeNum = e.bridge;
+                            }                              
+
                         }
-                        
-                        //save the previously selected circle, and the clicked node as the current selection
-                        lastSelectedCirc = selectedCirc;
-                        selectedCirc = d.node;                               
-                        
                     }
+                    
+                    //save the previously selected circle, and the clicked node as the current selection
+                    lastSelectedCirc = selectedCirc;
+                    selectedCirc = d.node; 
+                    
                 }
             });
             
-
+            links.forEach(function(e){
+                if(e.bridge == bridgeNum){
+                    e.used = true;
+                }
+            })*/
+            lastSelectedCirc = selectedCirc;
+            selectedCirc = d.node; 
         }
     
+        /*
         //if the node was clicked twice, 
         else if (selectedCirc == d.node) {
             //log an error
             console.log('same node!')
             
             //reset the link color to gray
-            var lastLink = d3.select('.' + 'link-' + lastSelectedCirc + selectedCirc);
-            lastLink.attr('stroke','gray');
+            var lastLink1 = d3.select('.' + 'link-' + lastSelectedCirc + selectedCirc);
+            lastLink1.attr('stroke','gray').attr('stroke-width',2);
+            var lastLink2 = d3.select('.' + 'link-' + selectedCirc + lastSelectedCirc);
+            lastLink2.attr('stroke','gray').attr('stroke-width',2);
             
             //reset node values
             d.color = 'gray' 
@@ -180,12 +265,14 @@ circles
             //reset the selected node
             selectedCirc = lastSelectedCirc;
             lastSelectedCirc = null;
-        }   
+        } 
+        */
     
         //if there is no previously selected node (first node since refresh), set the current selection
         else {
             selectedCirc = d.node; 
         }
+        
         
             
     });
@@ -209,7 +296,7 @@ plot.append('rect')
         })
         
         d3.selectAll('.node').attr('fill','gray').attr('r',7);
-        d3.selectAll('.link').attr('stroke','gray');
+        d3.selectAll('.link').attr('stroke','gray').attr('stroke-width',1);
         
         selectedCirc = null;
     });
